@@ -23,7 +23,7 @@ class RBM(object):
                 -- data_class: pointer to the data layer
                 -- number_labels: int
                 -- number_hidden: int
-                -- number_visible: int
+                -- number_feature: int
                 -- sigma_b: real (sigma of the gaussian for the random init for the biases)
                 -- sigma_W: real (sigma of the gaussian for the random init for the weights)
         """
@@ -33,9 +33,9 @@ class RBM(object):
     def randomInit(self):
 
         self.n_hidden = self.params['number_hidden']
-        self.n_visible = self.params['number_visible']
+        self.n_feature = self.params['number_feature']
         self.n_label = self.params['number_label']
-        self.n_visAll = self.n_visible + self.n_label
+        self.n_visAll = self.n_feature + self.n_label
         
         # Weights and biases
         self.b_h = np.random.normal(0., self.params['sigma_b'], self.params['number_hidden'])
@@ -55,16 +55,16 @@ class RBM(object):
         """ Set a feature vector onto the visible layer 
 
         Keywords: [feature]
-            -- feature: the feature vector of length self.n_visible to be set to the first instances of the visible layer
+            -- feature: the feature vector of length self.n_feature to be set to the first instances of the visible layer
 
         """
 
-        self.states_v[:self.n_visible] = feature
+        self.states_v[:self.n_feature] = feature
 
     def getFeature(self):
         """ getter for the actual feature """
 
-        return copy.deepcopy(self.states_v[:self.n_visible])
+        return copy.deepcopy(self.states_v[:self.n_feature])
 
     def setLabel(self, label):
         """ Set a label vector onto the visible layer
@@ -74,12 +74,12 @@ class RBM(object):
 
         """
 
-        self.states_v[self.n_visible:] = label
+        self.states_v[self.n_feature:] = label
 
     def getLabel(self):
         """ Getter for the actual label """
 
-        return copy.deepcopy( self.states_v[self.n_visible:])
+        return copy.deepcopy( self.states_v[self.n_feature:])
 
 
     def Update_hidden(self):
@@ -103,13 +103,13 @@ class RBM(object):
             r = np.random.rand( self.n_visAll )
             self.states_v = np.floor( probs - r + 1.)
         elif clamped == 'label':
-            probs = expit(self.W.T[:self.n_visible,:].dot(self.states_h) + self.b_v[:self.n_visible] + self.visibleInput[:self.n_visible])
-            r = np.random.rand( self.n_visible )
-            self.states_v[:self.n_visible] = np.floor( probs - r + 1.)
+            probs = expit(self.W.T[:self.n_feature,:].dot(self.states_h) + self.b_v[:self.n_feature] + self.visibleInput[:self.n_feature])
+            r = np.random.rand( self.n_feature )
+            self.states_v[:self.n_feature] = np.floor( probs - r + 1.)
         elif clamped == 'feature':
-            probs = expit(self.W.T[self.n_visible:,:].dot(self.states_h) + self.b_v[self.n_visible:] + self.visibleInput[self.n_visible:])
+            probs = expit(self.W.T[self.n_feature:,:].dot(self.states_h) + self.b_v[self.n_feature:] + self.visibleInput[self.n_feature:])
             r = np.random.rand( self.n_label )
-            self.states_v[self.n_visible:] = np.floor( probs - r + 1.)
+            self.states_v[self.n_feature:] = np.floor( probs - r + 1.)
         else:
             sys.exit('The variable clamped has an invalid value')
 

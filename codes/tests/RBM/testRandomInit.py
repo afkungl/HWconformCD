@@ -4,7 +4,7 @@ import numpy as np
 
 
 p = {'number_hidden': 4,
-     'number_visible': 12,
+     'number_feature': 12,
      'number_label': 3,
      'sigma_b': 0.5,
      'sigma_W': 0.5}
