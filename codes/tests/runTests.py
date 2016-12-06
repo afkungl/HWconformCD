@@ -13,7 +13,9 @@ for folder in folders:
     for f in fis:
         
         if f.endswith('.py'):
-            
+        
+            print '=================================='
             print 'Start unittest:............%s' %f
             st = "python %s" % os.path.join(folder,f)
             subprocess.call( st, shell = True)
+            print '=================================='

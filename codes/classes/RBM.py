@@ -36,11 +36,19 @@ class RBM(object):
         self.n_feature = self.params['number_feature']
         self.n_label = self.params['number_label']
         self.n_visAll = self.n_feature + self.n_label
+
         
         # Weights and biases
-        self.b_h = np.random.normal(0., self.params['sigma_b'], self.params['number_hidden'])
-        self.b_v = np.random.normal(0., self.params['sigma_b'], self.n_visAll)
-        self.W = np.random.normal(0., self.params['sigma_W'], (self.n_hidden, self.n_visAll))
+        if not self.params['sigma_b'] == 0.:
+            self.b_h = np.random.normal(0., self.params['sigma_b'], self.params['number_hidden'])
+            self.b_v = np.random.normal(0., self.params['sigma_b'], self.n_visAll)
+        else:
+            self.b_h = np.zeros( self.params['number_hidden'])
+            self.b_v = np.zeros( self.n_visAll)
+        if not self.params['sigma_W'] == 0.:
+            self.W = np.random.normal(0., self.params['sigma_W'], (self.n_hidden, self.n_visAll))
+        else:
+            self.W = np.zeros((self.n_hidden, self.n_visAll))
 
         # Visible input (the external input to the visible layer)
         self.visibleInput = np.zeros( self.n_visAll)

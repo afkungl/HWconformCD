@@ -3,7 +3,7 @@ import numpy as np
 import os
 
 if os.path.isfile('mnist_test.csv'):
-    sets = 'mnist_test.csv'
+    sets = '../dataManager/mnist_test.csv'
 else:
     sets = 'dataManager/mnist_test.csv'
 
