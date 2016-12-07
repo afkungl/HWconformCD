@@ -69,6 +69,15 @@ class RBM(object):
 
         self.states_v[:self.n_feature] = feature
 
+    def setVisibleInput(self, vinput):
+        
+        self.visibleInput = vinput
+    
+    def delVisibleInput(self):
+        """ set the visible Input to zero """
+
+        self.visibleInput = np.zeros( self.n_visAll)
+
     def getFeature(self):
         """ getter for the actual feature """
 
@@ -91,19 +100,28 @@ class RBM(object):
 
 
     def Update_hidden(self):
-        """ Update the hidden layer once """
+        """ Update the hidden layer once 
+        
+        Returns: [states_h]
+            -- states_h: the updated hidden states
+        """
         
         probs = expit(self.W.dot(self.states_v) + self.b_h)
         r = np.random.rand( self.n_hidden )
         self.states_h = np.floor( probs - r + 1.)
 
+        return copy.deepcopy(self.states_h)
+
     def Update_visible(self, clamped = 'none'):
         """ Update the visible neurons once
 
-        Kewords: clamped
+        Kewords: [clamped]
             -- clamped = none: The complete visible layer is updated
             -- clamped = label: The label is clamped
             -- clamped = feature: The feature vector is clamped
+        
+        Returns: [visible_states]
+            -- visible_states: Returns the visible states
         """
 
         if clamped == 'none':
@@ -121,6 +139,7 @@ class RBM(object):
         else:
             sys.exit('The variable clamped has an invalid value')
 
+        return copy.deepcopy(self.states_v)
 
 
     def Update(self, clamped = 'none'):
