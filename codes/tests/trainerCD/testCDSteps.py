@@ -12,7 +12,7 @@ p_RBM = {'number_hidden': 5,
 
 rbm = HWconformCD.RBM(p_RBM)
 
-if os.path.isfile('mnist_test.csv'):
+if os.path.isfile('../dataManager/mnist_test.csv'):
     sets = '../dataManager/mnist_test.csv'
 else:
     sets = 'dataManager/mnist_test.csv'
@@ -34,4 +34,32 @@ trainer.connectRBM(rbm)
 trainer.connectDataManager(DM)
 trainer.initTraining()
 DM.setUsedLabels(labels)
+DM.loadTraining()
+DM.prepareBag()
 miniBatch = DM.getBalancedMiniBatch()
+
+oneexample = miniBatch[0]
+
+# Fist test: one example gives reasonable values
+[g_W, g_bh, g_vh] = trainer.getOneGradient( oneexample['feature'], oneexample['label'])
+(m,n) = g_W.shape
+Nh = len(g_bh)
+Nv = len(g_bv)
+test1 = (m == 5) and (n == 15) and (Nh == 5) and (Nv == 15)
+if test1:
+    print 'One example gradient test: PASSED'
+else:
+    print 'One example gradient test: FAILED'
+
+# Second test: miniBatch learning gives reasonable values
+[g_W, g_bh, g_vh] = trainer.getOneMiniBatchGradient( oneexample['feature'], oneexample['label'])
+(m,n) = g_W.shape
+Nh = len(g_bh)
+Nv = len(g_bv)
+test1 = (m == 5) and (n == 15) and (Nh == 5) and (Nv == 15)
+if test1:
+    print 'One mini batch gradient test: PASSED'
+else:
+    print 'One mini batch gradient test: FAILED'
+
+

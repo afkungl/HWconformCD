@@ -1,6 +1,6 @@
 """ The CD trainer 
 
-The class traines an RBM object with given metaparameters and dataset.
+The class trains an RBM object with given metaparameters and dataset.
 """
 
 import numpy as np
@@ -61,18 +61,18 @@ class trainerCD1(object):
 
         self.RBM.randomInit()
 
-   def getOneGradient(self, feature, label):
-       """ Do CD on one example of the batch and return the obtained gradient
+    def getOneGradient(self, feature, label):
+        """ Do CD on one example of the batch and return the obtained gradient
 
-       Keywords: [feature, label]
+        Keywords: [feature, label]
            -- feature: the feature vector
            -- label: name of the label
 
-       Return: [gradient_w, gradient_bh, gradient_bv]
+        Return: [gradient_w, gradient_bh, gradient_bv]
            -- gradient_w: Matrix of the weigth gradient
            -- gradient_bh: Vector of the bias gradient for the hidden units
            -- gradient_bv: Vector of the bias gradient for the visible units
-        """
+         """
 
         # First create the visible input from the data
         vinput = np.append(feature, self.label_dic[label]) * 0.95 + 0.025
@@ -92,10 +92,10 @@ class trainerCD1(object):
 
         # Calculate the necessary gradients
         gradient_w = np.outer(h_data,v_data) - np.outer(h_recon, v_recon)
-        gradient_hb = h_data - h_model
-        gradient_hv = v_data - v_model
-
-        return [ gradient_w, gradient_hb, gradient_hv]
+        gradient_bh = h_data - h_model
+        gradient_bv = v_data - v_model
+ 
+        return [ gradient_w, gradient_bh, gradient_bv]
 
     def getOneMiniBatchGradient( self, miniBatch):
         """ Take one minibatch as it is created by the data manager and get the average gradient over the minibatch
