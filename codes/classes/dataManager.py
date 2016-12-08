@@ -75,7 +75,7 @@ class dataManager(object):
                 l_proposed = self.training[proposed,0]
 
                 if l_proposed == l and (not (proposed in gathered)):
-                    batch.append({'label': l_proposed, 'feature': self.training[proposed,1:]})
+                    batch.append({'label': l_proposed, 'feature': self.training[proposed,1:]/255.})
                     gathered.append(proposed)
                     accepted = True
 

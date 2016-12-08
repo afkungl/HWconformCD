@@ -3,10 +3,12 @@
 The class trains an RBM object with given metaparameters and dataset.
 """
 
+from __future__ import print_function
 import numpy as np
 import os
 import sys
 import random
+#import time # Only for debugging
 
 class trainerCD1(object):
 
@@ -24,6 +26,9 @@ class trainerCD1(object):
             
 
         self.eta = params['learning_rate']
+        self.eta_w = self.eta
+        self.eta_bv = self.eta
+        self.eta_bh = self.eta
         self.labels = params['used_labels']
         self.n_labels = len(self.labels)
         self.sigma_b = params['sigma_b']
@@ -36,6 +41,20 @@ class trainerCD1(object):
             rbmLabel[i] = 1
             self.label_dic[l] = rbmLabel
             i += 1
+
+    def setLearningRates( self, eta_w, eta_bv, eta_bh):
+        """ Set the learining rates for the trainer. Especially the learning rates for the weights and biases can be independently modified.
+        If this method is not used then there is only one learning rate for all the parameters.
+
+        Keywords: [ eta_w, eta_bv, eta_bh]
+            -- eta_w: weights learning rate
+            -- eat_bv: visible bias learning rate
+            -- eta_bh: hidden learning rate
+        """
+
+        self.eta_w = eta_w
+        self.eta_bv = eta_bv
+        self.eta_bh = eta_bh
 
     def connectRBM(self, RBM):
         """ Connect the RBM object to the trainer
@@ -92,8 +111,8 @@ class trainerCD1(object):
 
         # Calculate the necessary gradients
         gradient_w = np.outer(h_data,v_data) - np.outer(h_recon, v_recon)
-        gradient_bh = h_data - h_model
-        gradient_bv = v_data - v_model
+        gradient_bh = h_data - h_recon
+        gradient_bv = v_data - v_recon
  
         return [ gradient_w, gradient_bh, gradient_bv]
 
@@ -125,6 +144,32 @@ class trainerCD1(object):
         a_grbv = a_grbv/m
 
         return [a_grW, a_grbh, a_grbv]
+
+    def trainRBM( self, N):
+        """ Train the RBM using balanced minibatches  for N steps """
+        
+        self.DM.setUsedLabels( self.labels)
+        self.DM.loadTraining()
+        self.DM.prepareBag()
+
+        for i in xrange(N):
+           
+           # get the gradients
+           [ grad_W, grad_bh, grad_bv] = self.getOneMiniBatchGradient( self.DM.getBalancedMiniBatch())
+            
+           # Update weights and biases
+           self.RBM.W = self.RBM.W + self.eta_w * grad_W
+           self.RBM.b_h = self.RBM.b_h + self.eta_bh * grad_bh
+           self.RBM.b_v = self.RBM.b_v + self.eta_bv * grad_bv
+           
+           # Report to the console
+           j = i + 1
+           text = '\rTraining is finished for the %sth training step' %j
+           print( text, end='')
+           sys.stdout.flush()
+           
+        print('')
+        print('Training has finished')
 
 
 

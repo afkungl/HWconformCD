@@ -2,10 +2,13 @@ import HWconformCD
 import numpy as np
 import os
 
+
+print "WARNING: This test only checks if the syntax is working. Sensibility is not checked!"
+
 labels = [1,5,9]
 
-p_RBM = {'number_hidden': 5,
-     'number_feature': 12,
+p_RBM = {'number_hidden': 20,
+     'number_feature': 784,
      'number_label': 3,
      'sigma_b': 0.5,
      'sigma_W': 0.5}
@@ -41,22 +44,22 @@ miniBatch = DM.getBalancedMiniBatch()
 oneexample = miniBatch[0]
 
 # Fist test: one example gives reasonable values
-[g_W, g_bh, g_vh] = trainer.getOneGradient( oneexample['feature'], oneexample['label'])
+[g_W, g_bh, g_bv] = trainer.getOneGradient( oneexample['feature'], oneexample['label'])
 (m,n) = g_W.shape
 Nh = len(g_bh)
 Nv = len(g_bv)
-test1 = (m == 5) and (n == 15) and (Nh == 5) and (Nv == 15)
+test1 = (m == 20) and (n == 787) and (Nh == 20) and (Nv == 787)
 if test1:
     print 'One example gradient test: PASSED'
 else:
     print 'One example gradient test: FAILED'
 
 # Second test: miniBatch learning gives reasonable values
-[g_W, g_bh, g_vh] = trainer.getOneMiniBatchGradient( oneexample['feature'], oneexample['label'])
+[g_W, g_bh, g_bv] = trainer.getOneMiniBatchGradient( miniBatch)
 (m,n) = g_W.shape
 Nh = len(g_bh)
 Nv = len(g_bv)
-test1 = (m == 5) and (n == 15) and (Nh == 5) and (Nv == 15)
+test1 = (m == 20) and (n == 787) and (Nh == 20) and (Nv == 787)
 if test1:
     print 'One mini batch gradient test: PASSED'
 else:
