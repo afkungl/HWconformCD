@@ -39,10 +39,10 @@ for i in xrange(1000000):
 
 pS = pS/sum(pS)
 
-print "The theoretical distribution"
-print pTh
-print "The sampled distribution"
-print pS
+#print "The theoretical distribution"
+#print pTh
+#print "The sampled distribution"
+#print pS
 
 err = np.abs(pTh - pS)/ pTh
 

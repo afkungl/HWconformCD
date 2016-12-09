@@ -168,6 +168,7 @@ class trainerCD1(object):
            print( text, end='')
            sys.stdout.flush()
            
+        self.RBM.storeMetaTraining( self.labels)
         print('')
         print('Training has finished')
 

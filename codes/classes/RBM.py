@@ -7,12 +7,13 @@ import numpy as np
 from scipy.special import expit
 import copy
 import sys
+import yaml
 
 class RBM(object):
     """ Object of the RBM """
 
 
-    def __init__ (self, params):
+    def __init__ (self, params, fromFile = False, filename = ''):
         """ The initialization of the class
 
         -- Keywords:
@@ -28,7 +29,14 @@ class RBM(object):
                 -- sigma_W: real (sigma of the gaussian for the random init for the weights)
         """
 
+        # Option to initialize the RBM from a file
+        if fromFile:
+            self.loadRBM( filename)
+            return
+
         self.params = params
+        self.trained = False
+        self.labels = []
 
     def randomInit(self):
 
@@ -49,6 +57,7 @@ class RBM(object):
             self.W = np.random.normal(0., self.params['sigma_W'], (self.n_hidden, self.n_visAll))
         else:
             self.W = np.zeros((self.n_hidden, self.n_visAll))
+
 
         # Visible input (the external input to the visible layer)
         self.visibleInput = np.zeros( self.n_visAll)
@@ -158,3 +167,64 @@ class RBM(object):
         """ getter visible states """
 
         return copy.deepcopy(self.states_v)
+
+    def storeMetaTraining(self, labels):
+        """ Report that the RBM has been trained by a trainer
+
+        Keywords: [labels]
+            -- labels: list of the stored labels
+        """
+
+        self.trained = True
+        self.labels = labels
+
+    ############################################
+    ## Writing and saving the RBM into a yaml file
+
+    def saveRBM(self, filename):
+        """
+        The methods dumps the RBM into a yaml file
+
+        Keywords: [ filename]
+            -- filename: path for the file to save
+        """
+       
+        dictToSave = { 'hidden' : self.n_hidden,
+                       'visible' : self.n_visAll,
+                       'feature' : self.n_feature,
+                       'label' : self.n_label,
+                       'trained' : self.trained,
+                       'labels' : self.labels,
+                       'params': self.params,
+                       'W' : self.W,
+                       'bias_h' : self.b_h,
+                       'bias_v' : self.b_v }
+        
+    
+        with open( filename, 'w') as outfile:
+            yaml.dump( dictToSave, outfile, default_flow_style = False)
+
+    def loadRBM( self, filename):
+        """
+        The method loads an rbm from the specified yaml database
+
+        Keywords: [filename]
+            -- filename: path of the yaml file
+        """
+
+        with open( filename, 'r') as infile:
+            Dict = yaml.load( infile)
+
+        self.n_hidden = Dict['hidden']
+        self.n_visAll = Dict['visible']
+        self.n_feature = Dict['feature']
+        self.n_label = Dict['label']
+        self.trained = Dict['trained']
+        self.labels = Dict['labels']
+        self.params = Dict['params'] 
+        self.W = Dict['W']
+        self.b_h = Dict['bias_h']
+        self.b_v = Dict['bias_v']
+
+
+
