@@ -81,3 +81,9 @@ class dataManager(object):
 
         return batch
 
+    def getTest( self):
+        """ getter for the test set. It provides a pointer to the test set. """
+
+        return self.test
+         
+

@@ -226,5 +226,33 @@ class RBM(object):
         self.b_h = Dict['bias_h']
         self.b_v = Dict['bias_v']
 
+    ##############################
 
+    def predict( self, visIn):
+        """ Predict the label using the RBM given the input in the visible layer
+
+        Keywords: [visIn]
+            -- visIn: Input to be clamped to the visible input
+
+        Returns: [ label]
+            -- the predicted label
+        """
+
+        self.setVisibleInput( visIn)
+        self.randomStateInit()
+
+        # Burn in
+        for n in xrange(4):
+            self.Update()
+
+        # Actual Sampling
+        pred_arr = np.zeros( self.n_label)
+        for n in xrange(20):
+            self.Update()
+            pred_arr += self.states_v[self.n_feature:]
+        
+
+        prediction = self.labels[pred_arr.argmax()]
+
+        return prediction
 

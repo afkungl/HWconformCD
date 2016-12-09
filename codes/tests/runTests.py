@@ -20,4 +20,3 @@ for folder in folders:
             sys.stdout.flush()
             st = "python %s" % os.path.join(folder,f)
             subprocess.call( st, shell = True)
-            print '=================================='
