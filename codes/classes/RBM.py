@@ -8,6 +8,7 @@ from scipy.special import expit
 import copy
 import sys
 import yaml
+import os
 
 class RBM(object):
     """ Object of the RBM """
@@ -65,7 +66,7 @@ class RBM(object):
     def randomStateInit(self):
         """ Initialize the states randomly with equal probability for ones and zeros"""
         
-        self.states_h = np.random.randint( 0, 2, len(self.b_h)) 
+        self.states_h = np.random.randint( 0, 2, len(self.b_h))
         self.states_v = np.random.randint( 0, 2, len(self.b_v))
     
     def setFeature(self, feature):
@@ -107,7 +108,7 @@ class RBM(object):
 
         return copy.deepcopy( self.states_v[self.n_feature:])
 
-
+    #@profile
     def Update_hidden(self):
         """ Update the hidden layer once 
         
@@ -121,6 +122,7 @@ class RBM(object):
 
         return copy.deepcopy(self.states_h)
 
+    #@profile
     def Update_visible(self, clamped = 'none'):
         """ Update the visible neurons once
 
@@ -151,6 +153,7 @@ class RBM(object):
         return copy.deepcopy(self.states_v)
 
 
+    #@profile
     def Update(self, clamped = 'none'):
         """ Update the complete RBM using Gibbs sampling. The method uses the update hidden units and separately the update visible units. """
     
@@ -256,3 +259,29 @@ class RBM(object):
 
         return prediction
 
+    def dream( self, N, outFolder = ''):
+        """ Let the RBM dream freely
+
+        Keywords: [N, outFolder]
+            -- N: Number of dreaming steps
+            -- outFolder: The path of the folder to dumb the states
+        """
+        # Prepare for dreaming
+        self.delVisibleInput()
+        self.randomStateInit()
+        if not os.path.exists( outFolder):
+            os.path.makedirs( outFolder)
+
+        # Burn in
+        for i in xrange(100):
+            self.Update()
+
+        # Dream and save
+        for i in xrange( N):
+            self.Update()
+            feature = 'dreamFeature%06d.npy' %i
+            label = 'labelFeature%06d.npy' %i
+            hidden = 'hiddenFeature%06d.npy' %i
+            np.save( os.path.join( outFolder, feature), self.states_v[:self.n_visible])
+            np.save( os.path.join( outFolder, label), self.states_v[self.n_visible:])
+            np.save( os.path.join( outFolder, hidden), self.states_h)       

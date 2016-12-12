@@ -29,7 +29,7 @@ class dataManager(object):
         if not os.path.isfile(self.test_path):
             sys.exit('ERROR: Invalid path for test set')
         else:
-            self.test = np.loadtxt( self.test_path, delimiter = ',', dtype = 'int')
+            self.test = np.loadtxt( self.test_path, delimiter = ',', dtype = np.int32)
 
     def loadTraining(self):
         """ Load the training set into the memory """
@@ -37,7 +37,7 @@ class dataManager(object):
         if not os.path.isfile(self.training_path):
             sys.exit('ERROR: Invalid path for training set')
         else:
-            self.training = np.loadtxt( self.training_path, delimiter = ',', dtype = 'int')
+            self.training = np.loadtxt( self.training_path, delimiter = ',', dtype = np.int32)
 
     def prepareBag(self):
         """ Prepare a bag for all the available trainingsamples

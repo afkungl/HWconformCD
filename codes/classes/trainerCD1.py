@@ -8,7 +8,9 @@ import numpy as np
 import os
 import sys
 import random
-#import time # Only for debugging
+import copy
+import time 
+import yaml
 
 class trainerCD1(object):
 
@@ -33,6 +35,8 @@ class trainerCD1(object):
         self.n_labels = len(self.labels)
         self.sigma_b = params['sigma_b']
         self.sigma_w = params['sigma_w']
+        
+        self.constrained = False
 
         self.label_dic = {}
         i = 0
@@ -41,6 +45,18 @@ class trainerCD1(object):
             rbmLabel[i] = 1
             self.label_dic[l] = rbmLabel
             i += 1
+
+    def setConstraints(self, w, b):
+        """ Set symmetric constraints on the paramters 
+        
+        Keywords: [w, b]
+            -- w: constraint for the weights
+            -- b: constraint for the biases
+        """
+
+        self.con_w = w
+        self.con_b = b
+        self.constrained = True
 
     def setLearningRates( self, eta_w, eta_bv, eta_bh):
         """ Set the learining rates for the trainer. Especially the learning rates for the weights and biases can be independently modified.
@@ -80,6 +96,7 @@ class trainerCD1(object):
 
         self.RBM.randomInit()
 
+    #@profile
     def getOneGradient(self, feature, label):
         """ Do CD on one example of the batch and return the obtained gradient
 
@@ -116,6 +133,7 @@ class trainerCD1(object):
  
         return [ gradient_w, gradient_bh, gradient_bv]
 
+    #@profile
     def getOneMiniBatchGradient( self, miniBatch):
         """ Take one minibatch as it is created by the data manager and get the average gradient over the minibatch
         
@@ -135,9 +153,9 @@ class trainerCD1(object):
 
         for example in miniBatch:
             [grW, grbh, grbv] = self.getOneGradient( example['feature'], example['label'])
-            a_grW = grW
-            a_grbh = grbh
-            a_grbv = grbv
+            a_grW += grW
+            a_grbh += grbh
+            a_grbv += grbv
 
         a_grW = a_grW/m
         a_grbh = a_grbh/m
@@ -145,12 +163,25 @@ class trainerCD1(object):
 
         return [a_grW, a_grbh, a_grbv]
 
+    #@profile
     def trainRBM( self, N):
-        """ Train the RBM using balanced minibatches  for N steps """
+        """ Train the RBM using balanced minibatches  for N steps 
+        
+        Keywords: N
+            -- N : number of training steps, One step is a training step on a minibatch
+        """
+        
         
         self.DM.setUsedLabels( self.labels)
-        self.DM.loadTraining()
         self.DM.prepareBag()
+
+        # Arrays to save the training history
+        self.TH_biash = []
+        self.TH_biasv = []
+        self.TH_W = []
+
+        # Measure the needed time for training
+        t1 = time.clock()
 
         for i in xrange(N):
            
@@ -158,21 +189,49 @@ class trainerCD1(object):
            [ grad_W, grad_bh, grad_bv] = self.getOneMiniBatchGradient( self.DM.getBalancedMiniBatch())
             
            # Update weights and biases
-           self.RBM.W = self.RBM.W + self.eta_w * grad_W
-           self.RBM.b_h = self.RBM.b_h + self.eta_bh * grad_bh
-           self.RBM.b_v = self.RBM.b_v + self.eta_bv * grad_bv
+           self.RBM.W += self.eta_w * grad_W
+           self.RBM.b_h += self.eta_bh * grad_bh
+           self.RBM.b_v += self.eta_bv * grad_bv
+           if self.constrained:
+              np.clip( self.RBM.W, -self.con_w, self.con_w)
+              np.clip( self.RBM.b_h, -self.con_b, self.con_b)
+              np.clip( self.RBM.b_v, -self.con_b, self.con_b)
+
+           # Save the weights and biases
            
+           if i%100 == 0:
+            self.TH_biash.append(copy.deepcopy(self.RBM.b_h[:10]))
+            self.TH_biasv.append(copy.deepcopy(self.RBM.b_v[:10]))
+            self.TH_W.append(copy.deepcopy(self.RBM.W[:10,4]))
+
            # Report to the console
            j = i + 1
            text = '\rTraining is finished for the %sth training step' %j
            print( text, end='')
            sys.stdout.flush()
+
+        dt = time.clock() - t1
            
         self.RBM.storeMetaTraining( self.labels)
         print('')
         print('Training has finished')
+        time_rep = 'The training took: %s sec' %dt
+        print(time_rep)
 
+    def saveTrainingHistory(self, filename):
+        """ Save the evolution of the weights and the biases to a yaml database
+            
+            Keywords: [filename]
+                -- filename: name of the target yaml database
+        """
+        
+        dictToSave = { 'W': np.array(self.TH_W),
+                      'b_h' : np.array(self.TH_biash),
+                      'b_v' : np.array(self.TH_biasv) }
+    
 
+        with open( filename, 'w') as outfile:
+            yaml.dump( dictToSave, outfile, default_flow_style = False)
 
 
 

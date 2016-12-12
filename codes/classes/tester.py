@@ -67,7 +67,7 @@ class tester( object):
 
         # get the test set from the dataManager
         testSet = self.DM.getTest()
-        labelInput = np.zeros(self.RBM.n_label)
+        labelInput = np.zeros(self.RBM.n_label) # There should be no input from the label, i.e. zero visible input for the label neurons
 
         for i in xrange(len(testSet)):
             
@@ -76,8 +76,9 @@ class tester( object):
             if not(label in self.labels):
                 continue
             feature = testSet[i,1:]/255.
-            vinput = np.append(feature, labelInput) * 0.95 + 0.025
+            vinput = feature * 0.95 + 0.025
             vinput = np.log(1./(1./vinput - 1.))
+            vinput = np.append( vinput, labelInput)
 
             # Predict
             prediction = self.RBM.predict( vinput)
