@@ -152,10 +152,10 @@ class trainerCD1(object):
         a_grbv = np.zeros( self.RBM.n_visAll)
 
         for example in miniBatch:
-            [grW, grbh, grbv] = self.getOneGradient( example['feature'], example['label'])
-            a_grW += grW
-            a_grbh += grbh
-            a_grbv += grbv
+            gr = self.getOneGradient( example['feature'], example['label'])
+            a_grW += gr[0]
+            a_grbh += gr[1]
+            a_grbv += gr[2]
 
         a_grW = a_grW/m
         a_grbh = a_grbh/m
@@ -164,16 +164,21 @@ class trainerCD1(object):
         return [a_grW, a_grbh, a_grbv]
 
     #@profile
-    def trainRBM( self, N):
+    def trainRBM( self, N, outFolder = 'trainingData'):
         """ Train the RBM using balanced minibatches  for N steps 
         
-        Keywords: N
+        Keywords: N, optinal: outFolder
             -- N : number of training steps, One step is a training step on a minibatch
+            -- outFolder: path of the folder to save the data
         """
         
         
         self.DM.setUsedLabels( self.labels)
         self.DM.prepareBag()
+
+        # Prepare outFolder
+        if not os.path.exists( outFolder):
+            os.makedirs( outFolder)
 
         # Arrays to save the training history
         self.TH_biash = []
@@ -186,26 +191,29 @@ class trainerCD1(object):
         for i in xrange(N):
            
            # get the gradients
-           [ grad_W, grad_bh, grad_bv] = self.getOneMiniBatchGradient( self.DM.getBalancedMiniBatch())
+           grad = self.getOneMiniBatchGradient( self.DM.getBalancedMiniBatch())
             
            # Update weights and biases
-           self.RBM.W += self.eta_w * grad_W
-           self.RBM.b_h += self.eta_bh * grad_bh
-           self.RBM.b_v += self.eta_bv * grad_bv
+           self.RBM.W += self.eta_w * grad[0]
+           self.RBM.b_h += self.eta_bh * grad[1]
+           self.RBM.b_v += self.eta_bv * grad[2]
            if self.constrained:
-              np.clip( self.RBM.W, -self.con_w, self.con_w)
-              np.clip( self.RBM.b_h, -self.con_b, self.con_b)
-              np.clip( self.RBM.b_v, -self.con_b, self.con_b)
+              self.RBM.W.clip( -self.con_w, self.con_w, out = self.RBM.W)
+              self.RBM.b_h.clip( -self.con_b, self.con_b, out = self.RBM.b_h)
+              self.RBM.b_v.clip( -self.con_b, self.con_b, out = self.RBM.b_v)
 
            # Save the weights and biases
-           
-           if i%100 == 0:
-            self.TH_biash.append(copy.deepcopy(self.RBM.b_h[:10]))
-            self.TH_biasv.append(copy.deepcopy(self.RBM.b_v[:10]))
-            self.TH_W.append(copy.deepcopy(self.RBM.W[:10,4]))
+           j = i + 1
+           if i%500 == 0:
+              W = 'weights%08d.npy' %i
+              b_h = 'biasH%08d.npy' %i
+              b_v = 'biasV%08d.npy' %i
+              np.save( os.path.join( outFolder, W), self.RBM.W)
+              np.save( os.path.join( outFolder, b_h), self.RBM.b_h)
+              np.save( os.path.join( outFolder, b_v), self.RBM.b_v)      
 
            # Report to the console
-           j = i + 1
+           
            text = '\rTraining is finished for the %sth training step' %j
            print( text, end='')
            sys.stdout.flush()
@@ -218,20 +226,44 @@ class trainerCD1(object):
         time_rep = 'The training took: %s sec' %dt
         print(time_rep)
 
-    def saveTrainingHistory(self, filename):
-        """ Save the evolution of the weights and the biases to a yaml database
-            
-            Keywords: [filename]
-                -- filename: name of the target yaml database
-        """
+
+### Classic CD1 trainer ###
+
+class trainerCD1Classic( trainerCD1):
+
+    def getOneGradient(self, feature, label):
+        """ Do CD on one example of the batch and return the obtained gradient
+            The clamping is done in the classic manner. I.e. the pictue is binarized adn clamped
+
+        Keywords: [feature, label]
+           -- feature: the feature vector
+           -- label: name of the label
+
+        Return: [gradient_w, gradient_bh, gradient_bv]
+           -- gradient_w: Matrix of the weigth gradient
+           -- gradient_bh: Vector of the bias gradient for the hidden units
+           -- gradient_bv: Vector of the bias gradient for the visible units
+         """
         
-        dictToSave = { 'W': np.array(self.TH_W),
-                      'b_h' : np.array(self.TH_biash),
-                      'b_v' : np.array(self.TH_biasv) }
-    
+        self.RBM.randomStateInit()
 
-        with open( filename, 'w') as outfile:
-            yaml.dump( dictToSave, outfile, default_flow_style = False)
+        # First create the visible input from the data
+        visibleClamped = np.append(feature, self.label_dic[label])
+        r = np.random.rand( self.RBM.n_visAll )
+        visibleClamped = np.floor( visibleClamped - r + 1.)
+        self.RBM.states_v = visibleClamped
+        v_data = visibleClamped
 
+        # Initialize in a random state and do the updates
 
+        h_data = self.RBM.Update_hidden()
 
+        v_recon = self.RBM.Update_visible()
+        h_recon = self.RBM.Update_hidden()
+
+        # Calculate the necessary gradients
+        gradient_w = np.outer(h_data,v_data) - np.outer(h_recon, v_recon)
+        gradient_bh = h_data - h_recon
+        gradient_bv = v_data - v_recon
+ 
+        return [ gradient_w, gradient_bh, gradient_bv]

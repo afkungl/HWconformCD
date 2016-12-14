@@ -250,7 +250,7 @@ class RBM(object):
 
         # Actual Sampling
         pred_arr = np.zeros( self.n_label)
-        for n in xrange(20):
+        for n in xrange(100):
             self.Update()
             pred_arr += self.states_v[self.n_feature:]
         
@@ -259,10 +259,39 @@ class RBM(object):
 
         return prediction
 
-    def dream( self, N, outFolder = ''):
+    def predictClassic( self, feature):
+        """ Predict the label using the RBM given the input in the visible layer
+
+        Keywords: [visible]
+            -- visible: Input to be clamped to the visible layer
+
+        Returns: [ label]
+            -- the predicted label
+        """
+
+        self.randomStateInit()
+        self.delVisibleInput()
+        self.states_v[:self.n_feature] = feature
+        
+        # Burn in
+        for n in xrange(4):
+            self.Update( clamped = 'feature')
+
+        # Actual Sampling
+        pred_arr = np.zeros( self.n_label)
+        for n in xrange(20):
+            self.Update( clamped = 'feature')
+            pred_arr += self.states_v[self.n_feature:]
+        
+
+        prediction = self.labels[pred_arr.argmax()]
+
+        return prediction
+
+    def dream( self, N, outFolder = 'dreamData'):
         """ Let the RBM dream freely
 
-        Keywords: [N, outFolder]
+        Keywords: [N] optional: outFolder
             -- N: Number of dreaming steps
             -- outFolder: The path of the folder to dumb the states
         """
@@ -270,18 +299,18 @@ class RBM(object):
         self.delVisibleInput()
         self.randomStateInit()
         if not os.path.exists( outFolder):
-            os.path.makedirs( outFolder)
+            os.makedirs( outFolder)
 
         # Burn in
         for i in xrange(100):
             self.Update()
 
         # Dream and save
-        for i in xrange( N):
+        for i in range( N):
             self.Update()
-            feature = 'dreamFeature%06d.npy' %i
-            label = 'labelFeature%06d.npy' %i
-            hidden = 'hiddenFeature%06d.npy' %i
-            np.save( os.path.join( outFolder, feature), self.states_v[:self.n_visible])
-            np.save( os.path.join( outFolder, label), self.states_v[self.n_visible:])
+            feature = 'dreamFeature%08d.npy' %i
+            label = 'dreamLabel%08d.npy' %i
+            hidden = 'dreamHidden%08d.npy' %i
+            np.save( os.path.join( outFolder, feature), self.states_v[:self.n_feature])
+            np.save( os.path.join( outFolder, label), self.states_v[self.n_feature:])
             np.save( os.path.join( outFolder, hidden), self.states_h)       

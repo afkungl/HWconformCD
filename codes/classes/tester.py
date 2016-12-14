@@ -100,3 +100,44 @@ class tester( object):
            
         print('')
         print('Testing has finished')
+
+
+class testerClassic( tester):
+    """ Test the connected RBM with classic online binarized clamping """
+
+    def fullTest( self):
+        """ Test the predictions on the complete BM """
+
+        # get the test set from the dataManager
+        testSet = self.DM.getTest()
+
+        for i in xrange(len(testSet)):
+            
+            # Prepare the input
+            label = testSet[i,0]
+            if not(label in self.labels):
+                continue
+            feature = testSet[i,1:]/255.
+            r = np.random.rand( self.RBM.n_feature )
+            feature = np.floor( feature - r + 1.)  
+
+            # Predict
+            prediction = self.RBM.predictClassic( feature)
+
+            # Evaluate
+            if prediction == label:
+                self.correct += 1
+            else:
+                self.false += 1
+
+            self.C_mat[ self.labels.index(label), self.labels.index(prediction)] += 1
+
+
+            # Report to the console
+            j = i + 1
+            text = '\rTesting is finished for the %sth test' %j
+            print( text, end='')
+            sys.stdout.flush()
+           
+        print('')
+        print('Testing has finished')
