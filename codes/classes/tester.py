@@ -118,7 +118,7 @@ class testerClassic( tester):
             if not(label in self.labels):
                 continue
             feature = testSet[i,1:]/255.
-            r = np.random.rand( self.RBM.n_feature )
+            r = np.ones( self.RBM.n_feature ) * 0.5
             feature = np.floor( feature - r + 1.)  
 
             # Predict

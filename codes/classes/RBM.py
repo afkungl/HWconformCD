@@ -7,7 +7,7 @@ import numpy as np
 from scipy.special import expit
 import copy
 import sys
-import yaml
+import json
 import os
 
 class RBM(object):
@@ -117,6 +117,7 @@ class RBM(object):
         """
         
         probs = expit(self.W.dot(self.states_v) + self.b_h)
+        #print probs[:11]
         r = np.random.rand( self.n_hidden )
         self.states_h = np.floor( probs - r + 1.)
 
@@ -182,11 +183,11 @@ class RBM(object):
         self.labels = labels
 
     ############################################
-    ## Writing and saving the RBM into a yaml file
+    ## Writing and saving the RBM into a json file
 
     def saveRBM(self, filename):
         """
-        The methods dumps the RBM into a yaml file
+        The methods dumps the RBM into a json file
 
         Keywords: [ filename]
             -- filename: path for the file to save
@@ -199,24 +200,24 @@ class RBM(object):
                        'trained' : self.trained,
                        'labels' : self.labels,
                        'params': self.params,
-                       'W' : self.W,
-                       'bias_h' : self.b_h,
-                       'bias_v' : self.b_v }
+                       'W' : self.W.tolist(),
+                       'bias_h' : self.b_h.tolist(),
+                       'bias_v' : self.b_v.tolist() }
         
     
         with open( filename, 'w') as outfile:
-            yaml.dump( dictToSave, outfile, default_flow_style = False)
+            json.dump(dictToSave, outfile, indent=4, sort_keys=True)
 
     def loadRBM( self, filename):
         """
-        The method loads an rbm from the specified yaml database
+        The method loads an rbm from the specified json database
 
         Keywords: [filename]
-            -- filename: path of the yaml file
+            -- filename: path of the json file
         """
 
         with open( filename, 'r') as infile:
-            Dict = yaml.load( infile)
+            Dict = json.load( infile)
 
         self.n_hidden = Dict['hidden']
         self.n_visAll = Dict['visible']
@@ -225,9 +226,9 @@ class RBM(object):
         self.trained = Dict['trained']
         self.labels = Dict['labels']
         self.params = Dict['params'] 
-        self.W = Dict['W']
-        self.b_h = Dict['bias_h']
-        self.b_v = Dict['bias_v']
+        self.W = np.array(Dict['W'])
+        self.b_h = np.array(Dict['bias_h'])
+        self.b_v = np.array(Dict['bias_v'])
 
     ##############################
 
@@ -245,12 +246,12 @@ class RBM(object):
         self.randomStateInit()
 
         # Burn in
-        for n in xrange(4):
+        for n in xrange(30):
             self.Update()
 
         # Actual Sampling
         pred_arr = np.zeros( self.n_label)
-        for n in xrange(100):
+        for n in xrange(200):
             self.Update()
             pred_arr += self.states_v[self.n_feature:]
         
@@ -274,12 +275,12 @@ class RBM(object):
         self.states_v[:self.n_feature] = feature
         
         # Burn in
-        for n in xrange(4):
+        for n in xrange(30):
             self.Update( clamped = 'feature')
 
         # Actual Sampling
         pred_arr = np.zeros( self.n_label)
-        for n in xrange(20):
+        for n in xrange(200):
             self.Update( clamped = 'feature')
             pred_arr += self.states_v[self.n_feature:]
         
@@ -298,6 +299,42 @@ class RBM(object):
         # Prepare for dreaming
         self.delVisibleInput()
         self.randomStateInit()
+        self.states_h = np.ones( self.n_hidden)
+        self.states_v = np.zeros( self.n_visAll)
+        if not os.path.exists( outFolder):
+            os.makedirs( outFolder)
+
+        # Burn in
+        #for i in xrange(100):
+        #    self.Update()
+
+        # Dream and save
+        for i in range( N):
+            
+            feature = 'dreamFeature%08d.npy' %i
+            label = 'dreamLabel%08d.npy' %i
+            hidden = 'dreamHidden%08d.npy' %i
+            np.save( os.path.join( outFolder, feature), self.states_v[:self.n_feature])
+            np.save( os.path.join( outFolder, label), self.states_v[self.n_feature:])
+            np.save( os.path.join( outFolder, hidden), self.states_h)       
+            self.Update()
+            
+    def dreamLabel( self, N, label, outFolder = 'dreamData'):
+        """ Let the RBM dream freely
+
+        Keywords: [N] optional: outFolder
+            -- N: Number of dreaming steps
+            -- outFolder: The path of the folder to dumb the states
+        """
+        # Prepare for dreaming
+        feature = np.zeros( self.n_feature)
+        labelI = np.zeros( self.n_label)
+        labelI[ self.labels.index( label)] = 1.
+        vinput = np.append(feature, labelI) * 0.95 + 0.025
+        vinput = np.log(1./(1./vinput - 1.))
+        self.setVisibleInput(vinput)
+        self.randomStateInit()
+        self.states_h = np.ones( self.n_hidden)
         if not os.path.exists( outFolder):
             os.makedirs( outFolder)
 
@@ -313,4 +350,81 @@ class RBM(object):
             hidden = 'dreamHidden%08d.npy' %i
             np.save( os.path.join( outFolder, feature), self.states_v[:self.n_feature])
             np.save( os.path.join( outFolder, label), self.states_v[self.n_feature:])
-            np.save( os.path.join( outFolder, hidden), self.states_h)       
+            np.save( os.path.join( outFolder, hidden), self.states_h)
+
+
+    def dreamLabelClassic( self, N, label, outFolder = 'dreamData'):
+        """ Let the RBM dream freely
+
+        Keywords: [N] optional: outFolder
+            -- N: Number of dreaming steps
+            -- outFolder: The path of the folder to dumb the states
+        """
+        # Prepare for dreaming
+        labelI = np.zeros( self.n_label)
+        labelI[ self.labels.index( label)] = 1.
+        self.delVisibleInput()
+        self.randomStateInit()
+        self.states_h = np.ones( self.n_hidden)
+        if not os.path.exists( outFolder):
+            os.makedirs( outFolder)
+
+        self.states_v[self.n_feature:] = labelI
+
+        # Burn in
+        for i in xrange(100):
+            self.Update( clamped = 'label')
+
+        # Dream and save
+        for i in range( N):
+            self.Update( clamped = 'label')
+            feature = 'dreamFeature%08d.npy' %i
+            label = 'dreamLabel%08d.npy' %i
+            hidden = 'dreamHidden%08d.npy' %i
+            np.save( os.path.join( outFolder, feature), self.states_v[:self.n_feature])
+            np.save( os.path.join( outFolder, label), self.states_v[self.n_feature:])
+            np.save( os.path.join( outFolder, hidden), self.states_h)
+
+
+    def reportStatistic( self, filename):
+        """ Gather and report the statistics of the weights and biases and save them into a file
+
+            Keywords:
+                -- filename: name of the target file
+        """
+
+        # Initialize the dictionary
+        stat = {}
+
+        # Gather stat for the hidden bias
+        b_h = {}
+        b_h['mean'] = self.b_h.mean()
+        b_h['std'] = self.b_h.std()
+        b_h['max'] = self.b_h.max()
+        b_h['min'] = self.b_h.min()
+        stat['b_h'] = b_h
+
+        # Gather stat for the visible bias
+        b_v = {}
+        b_v['mean'] = self.b_v.mean()
+        b_v['std'] = self.b_v.std()
+        b_v['max'] = self.b_v.max()
+        b_v['min'] = self.b_v.min()
+        stat['b_v'] = b_v
+
+        # gather statistics for the Weights
+        W = {}
+        W['mean'] = self.W.mean()
+        W['std'] = self.W.std()
+        W['max'] = self.W.max()
+        W['min'] = self.W.min()
+        stat['W'] = W
+
+        # Report to the console
+        for key in stat:
+            print key
+            for key2 in stat[key]:
+                print '%s is %s' %(key2, stat[key][key2])
+
+        with open( filename, 'w') as outfile:
+            json.dump(stat, outfile, indent=4, sort_keys=True)

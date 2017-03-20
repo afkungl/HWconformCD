@@ -10,7 +10,8 @@ import sys
 import random
 import copy
 import time 
-import yaml
+import json
+import gc
 
 class trainerCD1(object):
 
@@ -210,7 +211,11 @@ class trainerCD1(object):
               b_v = 'biasV%08d.npy' %i
               np.save( os.path.join( outFolder, W), self.RBM.W)
               np.save( os.path.join( outFolder, b_h), self.RBM.b_h)
-              np.save( os.path.join( outFolder, b_v), self.RBM.b_v)      
+              np.save( os.path.join( outFolder, b_v), self.RBM.b_v)
+              
+              if i%5000 == 0:
+                gc.collect()
+
 
            # Report to the console
            
@@ -249,7 +254,7 @@ class trainerCD1Classic( trainerCD1):
 
         # First create the visible input from the data
         visibleClamped = np.append(feature, self.label_dic[label])
-        r = np.random.rand( self.RBM.n_visAll )
+        r = np.ones( self.RBM.n_visAll ) * 0.5
         visibleClamped = np.floor( visibleClamped - r + 1.)
         self.RBM.states_v = visibleClamped
         v_data = visibleClamped
@@ -257,6 +262,91 @@ class trainerCD1Classic( trainerCD1):
         # Initialize in a random state and do the updates
 
         h_data = self.RBM.Update_hidden()
+
+        v_recon = self.RBM.Update_visible()
+        h_recon = self.RBM.Update_hidden()
+
+        # Calculate the necessary gradients
+        gradient_w = np.outer(h_data,v_data) - np.outer(h_recon, v_recon)
+        gradient_bh = h_data - h_recon
+        gradient_bv = v_data - v_recon
+ 
+        return [ gradient_w, gradient_bh, gradient_bv]
+
+
+class trainerCD1Unsupervized( trainerCD1):  
+    """ Class which trains the BM in an unsupervized manner """
+    
+    def getOneGradient(self, feature, label):
+        """ Do CD on one example of the batch and return the obtained gradient
+
+        Keywords: [feature, label]
+           -- feature: the feature vector
+           -- label: name of the label
+
+        Return: [gradient_w, gradient_bh, gradient_bv]
+           -- gradient_w: Matrix of the weigth gradient
+           -- gradient_bh: Vector of the bias gradient for the hidden units
+           -- gradient_bv: Vector of the bias gradient for the visible units
+         """
+
+        # First create the visible input from the data
+        vinput = feature * 0.95 + 0.025
+        vinput = np.log(1./(1./vinput - 1.))
+        self.RBM.setVisibleInput(vinput)
+
+        # Initialize in a random state and do the updates
+        self.RBM.randomStateInit()
+
+        v_data = self.RBM.Update_visible()
+        h_data = self.RBM.Update_hidden()
+
+        self.RBM.delVisibleInput()
+
+        v_recon = self.RBM.Update_visible()
+        h_recon = self.RBM.Update_hidden()
+
+        # Calculate the necessary gradients
+        gradient_w = np.outer(h_data,v_data) - np.outer(h_recon, v_recon)
+        gradient_bh = h_data - h_recon
+        gradient_bv = v_data - v_recon
+ 
+        return [ gradient_w, gradient_bh, gradient_bv]
+
+
+class trainerCD1UnsupervizedClassic( trainerCD1):  
+    """ Class which trains the BM in an unsupervized manner """
+    
+    def getOneGradient(self, feature, label):
+        """ Do CD on one example of the batch and return the obtained gradient
+
+        Keywords: [feature, label]
+           -- feature: the feature vector
+           -- label: name of the label
+
+        Return: [gradient_w, gradient_bh, gradient_bv]
+           -- gradient_w: Matrix of the weigth gradient
+           -- gradient_bh: Vector of the bias gradient for the hidden units
+           -- gradient_bv: Vector of the bias gradient for the visible units
+         """
+
+        self.RBM.randomStateInit()
+
+        # First create the visible input from the data
+        visibleClamped = feature
+        r = np.ones( self.RBM.n_visAll ) * 0.5
+        visibleClamped = np.floor( visibleClamped - r + 1.)
+        self.RBM.states_v = visibleClamped
+        v_data = visibleClamped
+
+
+        # Initialize in a random state and do the updates
+        
+
+        v_data = self.RBM.Update_visible()
+        h_data = self.RBM.Update_hidden()
+
+        self.RBM.delVisibleInput()
 
         v_recon = self.RBM.Update_visible()
         h_recon = self.RBM.Update_hidden()
