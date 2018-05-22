@@ -153,6 +153,42 @@ class RBM(object):
 
         return copy.deepcopy(self.states_v)
 
+    def saveBMExplicit(self):
+
+        # Weights
+        N = self.n_hidden + self.n_visAll
+        W = np.zeros((N,N))
+        W[self.n_visAll:,:self.n_label] = self.W[:,self.n_feature:]
+        W[self.n_visAll:,self.n_label:self.n_visAll] = self.W[:,:self.n_feature]
+        W = W + W.T
+        np.savetxt('W.txt', W)
+
+        # biases
+        b = np.zeros(N)
+        b[:self.n_label] = self.b_v[self.n_feature:]
+        b[self.n_label:self.n_visAll] = self.b_v[:self.n_feature]
+        b[self.n_visAll:] = self.b_h
+        np.savetxt('b.txt', b)
+
+    def loadRBMExplicit(self, wFile, bFile):
+        """ The counterpart of the method save RBM explicit """
+
+        # Null the current parameters
+        self.W = self.W * 0.
+        self.b_v = self.b_v * 0.
+        self.b_h = self.b_h * 0.
+
+        # Weights
+        W = np.loadtxt(wFile)
+        self.W[:,self.n_feature:] = W[self.n_visAll:,:self.n_label]
+        self.W[:,:self.n_feature] = W[self.n_visAll:,self.n_label:self.n_visAll]
+
+        # biases
+        b = np.loadtxt(bFile)
+        self.b_v[self.n_feature:] = b[:self.n_label]
+        self.b_v[:self.n_feature] = b[self.n_label:self.n_visAll] 
+        self.b_h = b[self.n_visAll:] 
+
 
     #@profile
     def Update(self, clamped = 'none'):

@@ -68,6 +68,7 @@ class dataManager(object):
         for l in self.labels:
             
             accepted = False
+            i = 0
 
             while not accepted:
             
@@ -75,9 +76,14 @@ class dataManager(object):
                 l_proposed = self.training[proposed,0]
 
                 if l_proposed == l and (not (proposed in gathered)):
-                    batch.append({'label': l_proposed, 'feature': self.training[proposed,1:]/255.})
+                    batch.append({'label': l_proposed, 'feature': self.training[proposed,1:]/1.})
                     gathered.append(proposed)
                     accepted = True
+
+                i = i + 1
+
+                if i>2000:
+                    sys.exit('ERROR: Something went wrong with the getBalancedMiniBatch method. Time out due to try limit.')
 
         return batch
 

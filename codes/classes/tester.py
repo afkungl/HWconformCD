@@ -75,7 +75,7 @@ class tester( object):
             label = testSet[i,0]
             if not(label in self.labels):
                 continue
-            feature = testSet[i,1:]/255.
+            feature = testSet[i,1:]/1.
             vinput = feature * 0.95 + 0.025
             vinput = np.log(1./(1./vinput - 1.))
             vinput = np.append( vinput, labelInput)
@@ -117,7 +117,7 @@ class testerClassic( tester):
             label = testSet[i,0]
             if not(label in self.labels):
                 continue
-            feature = testSet[i,1:]/255.
+            feature = testSet[i,1:]/1.
             r = np.ones( self.RBM.n_feature ) * 0.5
             feature = np.floor( feature - r + 1.)  
 
